@@ -1,0 +1,14 @@
+CREATE UNIQUE INDEX "Listing_one_active_cycle" ON "Listing" ("propertyId", "transactionType") WHERE status IN ('AVAILABLE', 'DEPOSITED');
+CREATE UNIQUE INDEX "Listing_one_latest" ON "Listing" ("propertyId", "transactionType") WHERE "isLatest";
+CREATE UNIQUE INDEX "PropertyImage_one_cover" ON "PropertyImage" ("propertyId") WHERE "isCover";
+ALTER TABLE "User" ADD CONSTRAINT "User_normalized_email" CHECK (email = lower(trim(email)));
+ALTER TABLE "Property" ADD CONSTRAINT "Property_positive_areas" CHECK (("landArea" IS NULL OR "landArea" > 0) AND ("usableArea" IS NULL OR "usableArea" > 0) AND (frontage IS NULL OR frontage > 0) AND ("accessRoadWidth" IS NULL OR "accessRoadWidth" > 0));
+ALTER TABLE "Property" ADD CONSTRAINT "Property_nonnegative_counts" CHECK ((bedrooms IS NULL OR bedrooms >= 0) AND (bathrooms IS NULL OR bathrooms >= 0) AND ("floorNumber" IS NULL OR "floorNumber" >= 0) AND ("totalFloors" IS NULL OR "totalFloors" >= 0) AND version > 0);
+ALTER TABLE "Listing" ADD CONSTRAINT "Listing_type_status" CHECK (("transactionType" = 'RENT' AND status <> 'SOLD' AND "rentPeriod" IS NOT NULL) OR ("transactionType" = 'SALE' AND status <> 'RENTED' AND "rentPeriod" IS NULL));
+ALTER TABLE "Listing" ADD CONSTRAINT "Listing_price" CHECK (currency = 'VND' AND (("priceMode" = 'FIXED' AND amount > 0 AND amount IS NOT NULL) OR ("priceMode" = 'NEGOTIABLE' AND (amount IS NULL OR amount > 0)) OR ("priceMode" = 'ON_REQUEST' AND amount IS NULL)));
+ALTER TABLE "Listing" ADD CONSTRAINT "Listing_commission" CHECK (("commissionType" = 'NONE' AND "expectedCommissionAmount" IS NULL AND "expectedCommissionRate" IS NULL) OR ("commissionType" = 'AMOUNT' AND "expectedCommissionAmount" >= 0 AND "expectedCommissionAmount" IS NOT NULL AND "expectedCommissionRate" IS NULL) OR ("commissionType" = 'RATE' AND "expectedCommissionRate" BETWEEN 0 AND 100 AND "expectedCommissionRate" IS NOT NULL AND "expectedCommissionAmount" IS NULL));
+ALTER TABLE "Listing" ADD CONSTRAINT "Listing_nonnegative_conditions" CHECK (("requiredDepositAmount" IS NULL OR "requiredDepositAmount" >= 0) AND ("managementFee" IS NULL OR "managementFee" >= 0) AND ("parkingFee" IS NULL OR "parkingFee" >= 0) AND ("minLeaseMonths" IS NULL OR "minLeaseMonths" >= 0) AND version > 0 AND "cycleNumber" > 0 AND "saleAreaBasis" IN ('landArea', 'usableArea'));
+-- History is append-only even if a future application bug attempts UPDATE/DELETE.
+CREATE FUNCTION reject_history_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'History is append-only'; END; $$;
+CREATE TRIGGER audit_immutable BEFORE UPDATE OR DELETE ON "AuditLog" FOR EACH ROW EXECUTE FUNCTION reject_history_mutation();
+CREATE TRIGGER status_history_immutable BEFORE UPDATE OR DELETE ON "StatusHistory" FOR EACH ROW EXECUTE FUNCTION reject_history_mutation();

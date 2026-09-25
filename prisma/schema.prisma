@@ -1,0 +1,354 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum UserStatus {
+  ACTIVE
+  LOCKED
+}
+
+enum Visibility {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  ARCHIVED
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  LAND
+  ROOM
+  OFFICE
+  RETAIL
+  WAREHOUSE
+  OTHER
+}
+
+enum LegalStatus {
+  UNKNOWN
+  OWNER_PROVIDED
+  VERIFIED
+}
+
+enum TransactionType {
+  RENT
+  SALE
+}
+
+enum ListingStatus {
+  AVAILABLE
+  DEPOSITED
+  RENTED
+  SOLD
+  WITHDRAWN
+}
+
+enum PriceMode {
+  FIXED
+  NEGOTIABLE
+  ON_REQUEST
+}
+
+enum RentPeriod {
+  MONTH
+  YEAR
+}
+
+enum CommissionType {
+  NONE
+  AMOUNT
+  RATE
+}
+
+model User {
+  id                 String               @id @default(cuid())
+  name               String
+  email              String               @unique
+  emailVerified      Boolean              @default(false)
+  image              String?
+  role               Role                 @default(MEMBER)
+  status             UserStatus           @default(ACTIVE)
+  mustChangePassword Boolean              @default(true)
+  tempPasswordUsedAt DateTime?
+  version            Int                  @default(1)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  sessions           Session[]
+  accounts           Account[]
+  createdProperties  Property[]           @relation("Creator")
+  assignedProperties Property[]           @relation("Responsible")
+  verifiedProperties Property[]           @relation("Verifier")
+  permissions        PropertyPermission[] @relation("Recipient")
+  grants             PropertyPermission[] @relation("Granter")
+  confirmations      Listing[]
+  images             PropertyImage[]
+  documents          PropertyDocument[]
+  history            StatusHistory[]
+  audits             AuditLog[]
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
+model RequestLimit {
+  key       String   @id
+  count     Int
+  expiresAt DateTime
+}
+
+model Property {
+  id                String               @id @default(cuid())
+  code              String               @unique @default(dbgenerated("'BDS-' || lpad(nextval('property_code_seq')::text, 7, '0')"))
+  title             String               @default("")
+  propertyType      PropertyType         @default(OTHER)
+  provinceCity      String               @default("")
+  wardCommune       String               @default("")
+  addressLine       String               @default("")
+  projectBuilding   String               @default("")
+  mapUrl            String               @default("")
+  landArea          Decimal?             @db.Decimal(16, 2)
+  usableArea        Decimal?             @db.Decimal(16, 2)
+  bedrooms          Int?
+  bathrooms         Int?
+  floorNumber       Int?
+  totalFloors       Int?
+  frontage          Decimal?             @db.Decimal(12, 2)
+  accessRoadWidth   Decimal?             @db.Decimal(12, 2)
+  houseDirection    String               @default("")
+  balconyDirection  String               @default("")
+  furnishing        String               @default("")
+  amenities         String               @default("")
+  description       String               @default("")
+  highlights        String               @default("")
+  viewingNotes      String               @default("")
+  legalSummary      String               @default("")
+  legalStatus       LegalStatus          @default(UNKNOWN)
+  verifiedAt        DateTime?
+  verifiedById      String?
+  verifiedBy        User?                @relation("Verifier", fields: [verifiedById], references: [id])
+  verificationNotes String               @default("")
+  visibility        Visibility           @default(DRAFT)
+  createdById       String
+  createdBy         User                 @relation("Creator", fields: [createdById], references: [id])
+  responsibleUserId String?
+  responsibleUser   User?                @relation("Responsible", fields: [responsibleUserId], references: [id])
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  archivedAt        DateTime?
+  version           Int                  @default(1)
+  listings          Listing[]
+  permissions       PropertyPermission[]
+  owner             OwnerContact?
+  images            PropertyImage[]
+  documents         PropertyDocument[]
+  audits            AuditLog[]
+
+  @@index([visibility, updatedAt])
+  @@index([propertyType, provinceCity])
+  @@index([responsibleUserId])
+}
+
+model Listing {
+  id                       String          @id @default(cuid())
+  propertyId               String
+  property                 Property        @relation(fields: [propertyId], references: [id])
+  transactionType          TransactionType
+  cycleNumber              Int
+  isLatest                 Boolean         @default(true)
+  status                   ListingStatus   @default(AVAILABLE)
+  priceMode                PriceMode
+  currency                 String          @default("VND")
+  amount                   Decimal?        @db.Decimal(20, 2)
+  rentPeriod               RentPeriod?
+  saleAreaBasis            String          @default("usableArea")
+  requiredDepositAmount    Decimal?        @db.Decimal(20, 2)
+  paymentCycle             String          @default("")
+  minLeaseMonths           Int?
+  managementFee            Decimal?        @db.Decimal(20, 2)
+  electricityNote          String          @default("")
+  waterNote                String          @default("")
+  parkingFee               Decimal?        @db.Decimal(20, 2)
+  availableFrom            DateTime?       @db.Date
+  usageConditions          String          @default("")
+  paymentTerms             String          @default("")
+  taxFeeResponsibilityNote String          @default("")
+  expectedHandoverDate     DateTime?       @db.Date
+  transactionNotes         String          @default("")
+  commissionType           CommissionType  @default(NONE)
+  expectedCommissionAmount Decimal?        @db.Decimal(20, 2)
+  expectedCommissionRate   Decimal?        @db.Decimal(5, 2)
+  commissionNote           String          @default("")
+  lastConfirmedAt          DateTime?
+  lastConfirmedById        String?
+  lastConfirmedBy          User?           @relation(fields: [lastConfirmedById], references: [id])
+  version                  Int             @default(1)
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+  history                  StatusHistory[]
+
+  @@unique([propertyId, transactionType, cycleNumber])
+  @@index([transactionType, status, lastConfirmedAt])
+  @@index([amount])
+}
+
+model PropertyPermission {
+  propertyId       String
+  userId           String
+  canEdit          Boolean  @default(false)
+  canViewSensitive Boolean  @default(false)
+  grantedById      String
+  property         Property @relation(fields: [propertyId], references: [id])
+  user             User     @relation("Recipient", fields: [userId], references: [id])
+  grantedBy        User     @relation("Granter", fields: [grantedById], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@id([propertyId, userId])
+  @@index([userId, canEdit])
+}
+
+model OwnerContact {
+  id             String   @id @default(cuid())
+  propertyId     String   @unique
+  property       Property @relation(fields: [propertyId], references: [id])
+  name           String   @default("")
+  phone          String   @default("")
+  zalo           String   @default("")
+  source         String   @default("")
+  sensitiveNotes String   @default("")
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  objectKey  String   @unique
+  mime       String
+  bytes      Int
+  width      Int?
+  height     Int?
+  caption    String   @default("")
+  sortOrder  Int
+  isCover    Boolean  @default(false)
+  uploaderId String
+  uploader   User     @relation(fields: [uploaderId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId, sortOrder])
+}
+
+model PropertyDocument {
+  id           String   @id @default(cuid())
+  propertyId   String
+  property     Property @relation(fields: [propertyId], references: [id])
+  objectKey    String   @unique
+  originalName String
+  documentType String
+  mime         String
+  bytes        Int
+  uploaderId   String
+  uploader     User     @relation(fields: [uploaderId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([propertyId])
+}
+
+model StatusHistory {
+  id         String         @id @default(cuid())
+  listingId  String
+  listing    Listing        @relation(fields: [listingId], references: [id])
+  fromStatus ListingStatus?
+  toStatus   ListingStatus
+  reason     String
+  actorId    String
+  actor      User           @relation(fields: [actorId], references: [id])
+  createdAt  DateTime       @default(now())
+
+  @@index([listingId, createdAt])
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  actorId    String
+  actor      User      @relation(fields: [actorId], references: [id])
+  action     String
+  entity     String
+  entityId   String
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id])
+  diff       Json
+  sensitive  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([propertyId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, entity, createdAt])
+}
+
+model StorageTask {
+  id        String   @id @default(cuid())
+  objectKey String   @unique
+  notBefore DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+}
