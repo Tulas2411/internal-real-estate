@@ -1,3 +1,7 @@
+## Xác thực bằng số điện thoại
+
+Đăng nhập và tạo tài khoản dùng số điện thoại + mật khẩu. Xem [hướng dẫn chuyển đổi tài khoản cũ, tạo admin và số demo](docs/PHONE_AUTH.md).
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

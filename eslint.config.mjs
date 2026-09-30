@@ -5,6 +5,11 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    // Private images must reach the authenticated proxy on every request; no shared optimizer cache.
+    // Full navigation at auth boundaries intentionally clears the client router cache.
+    rules: { "@next/next/no-img-element": "off", "@next/next/no-location-assign-relative-destination": "off" },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
