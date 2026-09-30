@@ -72,30 +72,32 @@ enum CommissionType {
 }
 
 model User {
-  id                 String               @id @default(cuid())
-  name               String
-  email              String               @unique
-  emailVerified      Boolean              @default(false)
-  image              String?
-  role               Role                 @default(MEMBER)
-  status             UserStatus           @default(ACTIVE)
-  mustChangePassword Boolean              @default(true)
-  tempPasswordUsedAt DateTime?
-  version            Int                  @default(1)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  sessions           Session[]
-  accounts           Account[]
-  createdProperties  Property[]           @relation("Creator")
-  assignedProperties Property[]           @relation("Responsible")
-  verifiedProperties Property[]           @relation("Verifier")
-  permissions        PropertyPermission[] @relation("Recipient")
-  grants             PropertyPermission[] @relation("Granter")
-  confirmations      Listing[]
-  images             PropertyImage[]
-  documents          PropertyDocument[]
-  history            StatusHistory[]
-  audits             AuditLog[]
+  id                  String               @id @default(cuid())
+  name                String
+  email               String               @unique
+  emailVerified       Boolean              @default(false)
+  phoneNumber         String?              @unique
+  phoneNumberVerified Boolean              @default(false)
+  image               String?
+  role                Role                 @default(MEMBER)
+  status              UserStatus           @default(ACTIVE)
+  mustChangePassword  Boolean              @default(true)
+  tempPasswordUsedAt  DateTime?
+  version             Int                  @default(1)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  sessions            Session[]
+  accounts            Account[]
+  createdProperties   Property[]           @relation("Creator")
+  assignedProperties  Property[]           @relation("Responsible")
+  verifiedProperties  Property[]           @relation("Verifier")
+  permissions         PropertyPermission[] @relation("Recipient")
+  grants              PropertyPermission[] @relation("Granter")
+  confirmations       Listing[]
+  images              PropertyImage[]
+  documents           PropertyDocument[]
+  history             StatusHistory[]
+  audits              AuditLog[]
 }
 
 model Session {

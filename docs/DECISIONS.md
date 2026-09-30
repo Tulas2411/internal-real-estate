@@ -1,7 +1,7 @@
 # Quyết định triển khai
 
 - Giữ Next.js 16.3.6, React 19, Tailwind 4 từ repo. Prisma 6.19.3 dùng schema datasource URL và migrate CLI v6; không trộn với Prisma 7/8. Tham khảo tài liệu đi kèm `node_modules/next/dist/docs` và [Prisma v6](https://www.prisma.io/docs/orm/v6/prisma-schema/overview).
-- Better Auth 1.7.6 với Prisma adapter, database session 12 giờ, cookie cache tắt. Chỉ mở sign-in/email, sign-out, get-session; signup và endpoint sửa profile mặc định không được public. Hash/verify dùng `better-auth/crypto`. [Tài liệu options](https://better-auth.com/docs/reference/options).
+- Better Auth 1.7.6 với Prisma adapter, database session 12 giờ, cookie cache tắt. Chỉ mở sign-in/phone-number, sign-out, get-session; signup và endpoint sửa profile mặc định không được public. Hash/verify dùng `better-auth/crypto`. [Tài liệu options](https://better-auth.com/docs/reference/options).
 - Password tạm bị đánh dấu đã dùng khi tạo phiên đầu tiên. Phiên này chỉ được đổi mật khẩu/đăng xuất; nếu mất phiên trước khi đổi, admin cấp lại mật khẩu tạm. Đổi/reset/khóa/đổi role thu hồi session. Không gửi email. Mật khẩu tối thiểu 12 ký tự; secret không nằm trong audit.
 - `responsibleUserId` không cấp quyền. “Tôi được quyền sửa” là filter `canEdit`, kể cả người đó không phải người phụ trách. Dữ liệu nhạy cảm không được select/serialize nếu thiếu quyền. Lịch sử nhạy cảm là record riêng và bị loại khỏi kết quả của người không có quyền, kể cả nội dung diff.
 - Giá Decimal(20,2), serialize thành chuỗi. Lọc và sắp xếp giá RENT yêu cầu một kỳ (mặc định MONTH); không trộn YEAR vào khoảng giá MONTH. Khi không lọc/sắp xếp giá, hiển thị tất cả cùng đơn vị gốc. Diện tích lọc là diện tích sử dụng; đơn giá bán chọn rõ đất hoặc sử dụng.

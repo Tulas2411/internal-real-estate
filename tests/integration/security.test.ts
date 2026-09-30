@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { beforeAll, afterAll, describe, it, expect } from "vitest";
+import { beforeAll, beforeEach, afterAll, describe, it, expect } from "vitest";
 import sharp from "sharp";
 import { db } from "../../src/lib/db";
 import { type Actor, requireUser } from "../../src/lib/policy";
@@ -25,7 +25,7 @@ async function fixture() {
   return p;
 }
 async function login(actor: Actor) {
-  const response = await auth.handler(new Request(`${origin}/api/auth/sign-in/email`, { method: "POST", headers: { "Content-Type": "application/json", origin }, body: JSON.stringify({ email: actor.email, password }) }));
+  const response = await auth.handler(new Request(`${origin}/api/auth/sign-in/phone-number`, { method: "POST", headers: { "Content-Type": "application/json", origin }, body: JSON.stringify({ phoneNumber: actor.phoneNumber, password }) }));
   expect(response.status).toBe(200);
   return new Headers({ cookie: response.headers.getSetCookie().map(v => v.split(";")[0]).join("; "), origin, "Content-Type": "application/json" });
 }
@@ -35,9 +35,14 @@ beforeAll(async () => {
   const actors = [];
   for (const name of ["admin", "editor", "sensitive", "both", "reader"]) {
     const id = randomUUID();
-    actors.push(await db.user.create({ data: { id, email: `${name}-${suffix}@example.test`, name, role: name === "admin" ? "ADMIN" : "MEMBER", mustChangePassword: false, accounts: { create: { id: randomUUID(), providerId: "credential", accountId: id, password: hashed } } } }));
+    actors.push(await db.user.create({ data: { id, email: `${name}-${suffix}@example.test`, phoneNumber: `+1${BigInt("0x" + id.replaceAll("-", "").slice(0, 10)).toString().padStart(13, "0")}`, name, role: name === "admin" ? "ADMIN" : "MEMBER", mustChangePassword: false, accounts: { create: { id: randomUUID(), providerId: "credential", accountId: id, password: hashed } } } }));
   }
   [admin, editor, sensitive, both, reader] = actors;
+});
+beforeEach(async () => {
+  if (!new URL(process.env.DATABASE_URL!).pathname.endsWith("_test")) throw new Error("Unsafe test database");
+  // Independent journeys share a localhost IP, but each needs a fresh login budget.
+  await db.rateLimit.deleteMany();
 });
 afterAll(() => db.$disconnect());
 describe("DB thật: policy và concurrency", () => {

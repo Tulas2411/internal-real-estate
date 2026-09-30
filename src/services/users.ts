@@ -6,7 +6,8 @@ import { audit, changes } from "@/lib/audit";
 import { fail } from "@/lib/errors";
 import { passwordSchema, userCreate, userUpdate, userReset } from "@/lib/validation";
 import { rateLimit } from "@/lib/http";
-const userSelect = { id: true, name: true, email: true, role: true, status: true, mustChangePassword: true, version: true, createdAt: true } as const;
+import { internalAuthEmail } from "@/lib/phone";
+const userSelect = { id: true, name: true, phoneNumber: true, role: true, status: true, mustChangePassword: true, version: true, createdAt: true } as const;
 export async function listUsers(actor: Actor) {
   admin(actor);
   return db.user.findMany({ select: userSelect, orderBy: { name: "asc" }, take: 200 });
@@ -17,9 +18,8 @@ export async function createUser(actor: Actor, raw: unknown) {
   const { temporaryPassword, ...data } = userCreate.parse(raw);
   const password = await hashPassword(temporaryPassword);
   return db.$transaction(async tx => {
-    const user = await tx.user.create({ data: { ...data, accounts: { create: { id: randomUUID(), accountId: data.email, providerId: "credential", password } } }, select: userSelect });
-    // Better Auth credentials use the user id as accountId.
-    await tx.account.updateMany({ where: { userId: user.id }, data: { accountId: user.id } });
+    const id = randomUUID();
+    const user = await tx.user.create({ data: { id, ...data, email: internalAuthEmail(id), accounts: { create: { id: randomUUID(), accountId: id, providerId: "credential", password } } }, select: userSelect });
     await audit(tx, actor, "USER_CREATE", "User", user.id, null, data);
     return user;
   });
@@ -35,9 +35,10 @@ export async function updateUser(actor: Actor, id: string, raw: unknown) {
     if (old.role === "ADMIN" && old.status === "ACTIVE" && (data.role !== "ADMIN" || data.status !== "ACTIVE")) {
       if (await tx.user.count({ where: { role: "ADMIN", status: "ACTIVE" } }) <= 1) fail(409, "LAST_ADMIN", "Không thể khóa hoặc hạ quyền quản trị viên hoạt động cuối cùng.");
     }
-    const result = await tx.user.updateMany({ where: { id, version: expectedVersion }, data: { ...data, version: { increment: 1 } } });
+    const phoneChanged = data.phoneNumber !== undefined && data.phoneNumber !== old.phoneNumber;
+    const result = await tx.user.updateMany({ where: { id, version: expectedVersion }, data: { ...data, ...(phoneChanged ? { phoneNumberVerified: false } : {}), version: { increment: 1 } } });
     if (!result.count) fail(409, "CONFLICT", "Tài khoản đã thay đổi. Vui lòng tải lại.");
-    if (old.role !== data.role || old.status !== data.status) await tx.session.deleteMany({ where: { userId: id } });
+    if (old.role !== data.role || old.status !== data.status || phoneChanged) await tx.session.deleteMany({ where: { userId: id } });
     await audit(tx, actor, "USER_UPDATE", "User", id, null, changes(old, data));
     return { ok: true };
   });

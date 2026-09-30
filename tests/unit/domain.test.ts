@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { isStale, validateTransition } from "../../src/lib/domain";
 import { propertyCreate, propertyUpdate, listingCreate, commissionSchema, searchSchema } from "../../src/lib/validation";
 import { rights } from "../../src/lib/policy";
-const member = { id: "m", name: "M", email: "m@example.test", role: "MEMBER" as const, status: "ACTIVE" as const, mustChangePassword: false, version: 1 };
+const member = { id: "m", name: "M", phoneNumber: "+84900000001", role: "MEMBER" as const, status: "ACTIVE" as const, mustChangePassword: false, version: 1 };
 describe("Phân quyền độc lập", () => {
   it.each([[false, false], [true, false], [false, true], [true, true]])("edit=%s sensitive=%s", (canEdit, canViewSensitive) => {
     const r = rights(member, "PUBLISHED", { canEdit, canViewSensitive });

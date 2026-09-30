@@ -10,7 +10,7 @@ export async function auditList(actor: Actor, raw: unknown) {
 }
 export async function permissionList(actor: Actor) {
   admin(actor);
-  return db.propertyPermission.findMany({ include: { user: { select: { name: true, email: true } }, property: { select: { id: true, code: true, title: true } }, grantedBy: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 500 });
+  return db.propertyPermission.findMany({ include: { user: { select: { name: true, phoneNumber: true } }, property: { select: { id: true, code: true, title: true } }, grantedBy: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 500 });
 }
 export async function archivedList(actor: Actor) {
   admin(actor);

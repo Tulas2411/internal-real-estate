@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { phoneNumberSchema } from "./phone";
 export const propertyTypes = ["APARTMENT", "HOUSE", "LAND", "ROOM", "OFFICE", "RETAIL", "WAREHOUSE", "OTHER"] as const;
 export const statuses = ["AVAILABLE", "DEPOSITED", "RENTED", "SOLD", "WITHDRAWN"] as const;
 const text = z.string().trim().max(10000, "Tối đa 10.000 ký tự");
@@ -42,8 +43,8 @@ export const visibilitySchema = z.object({ expectedVersion: z.number().int().pos
 export const permissionSchema = z.object({ expectedVersion: z.number().int().positive(), userId: z.string().min(1), canEdit: z.boolean(), canViewSensitive: z.boolean() }).strict();
 export const assignSchema = z.object({ expectedVersion: z.number().int().positive(), responsibleUserId: z.string().min(1).nullable() }).strict();
 export const passwordSchema = z.object({ currentPassword: z.string().min(1).max(128), newPassword: z.string().min(12, "Mật khẩu ít nhất 12 ký tự").max(128) }).strict().refine(v => v.currentPassword !== v.newPassword, "Mật khẩu mới phải khác mật khẩu cũ.");
-export const userCreate = z.object({ name: short.min(1), email: z.email().transform(v => v.toLowerCase().trim()), role: z.enum(["ADMIN", "MEMBER"]), temporaryPassword: z.string().min(12).max(128) }).strict();
-export const userUpdate = z.object({ expectedVersion: z.number().int().positive(), name: short.min(1), role: z.enum(["ADMIN", "MEMBER"]), status: z.enum(["ACTIVE", "LOCKED"]) }).strict();
+export const userCreate = z.object({ name: short.min(1), phoneNumber: phoneNumberSchema, role: z.enum(["ADMIN", "MEMBER"]), temporaryPassword: z.string().min(12).max(128) }).strict();
+export const userUpdate = z.object({ expectedVersion: z.number().int().positive(), name: short.min(1), phoneNumber: phoneNumberSchema.optional(), role: z.enum(["ADMIN", "MEMBER"]), status: z.enum(["ACTIVE", "LOCKED"]) }).strict();
 export const userReset = z.object({ expectedVersion: z.number().int().positive(), temporaryPassword: z.string().min(12).max(128) }).strict();
 export const searchSchema = z.object({
   q: short.default(""), transactionType: z.enum(["RENT", "SALE"]).default("RENT"), propertyType: z.enum(propertyTypes).optional(), region: short.optional(), status: z.enum(statuses).optional(),

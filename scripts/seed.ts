@@ -4,6 +4,7 @@ import { hashPassword } from "better-auth/crypto";
 import sharp from "sharp";
 import { db } from "../src/lib/db";
 import { putObject } from "../src/lib/storage";
+import { internalAuthEmail } from "../src/lib/phone";
 import type { ListingStatus, PropertyType, Visibility } from "@prisma/client";
 export async function seed() {
   if (process.env.NODE_ENV === "production") throw new Error("Cấm seed demo trong production.");
@@ -13,15 +14,23 @@ export async function seed() {
   if (!passwordInput || passwordInput.length < 12) throw new Error("Điền DEMO_PASSWORD ít nhất 12 ký tự trong .env, chỉ dùng local.");
   const password = await hashPassword(passwordInput);
   const people = [
-    { id: "demo-admin", name: "Quản trị Demo", email: "admin@demo.local", role: "ADMIN" as const },
-    { id: "demo-editor", name: "Thành viên Chỉnh sửa", email: "editor@demo.local", role: "MEMBER" as const },
-    { id: "demo-sensitive", name: "Thành viên Riêng tư", email: "sensitive@demo.local", role: "MEMBER" as const },
-    { id: "demo-both", name: "Thành viên Đầy đủ", email: "both@demo.local", role: "MEMBER" as const },
-    { id: "demo-reader", name: "Thành viên Chỉ đọc", email: "reader@demo.local", role: "MEMBER" as const },
-    { id: "demo-locked", name: "Tài khoản Đã khóa", email: "locked@demo.local", role: "MEMBER" as const },
+    { id: "demo-admin", name: "Quản trị Demo", phoneNumber: "+84900000001", role: "ADMIN" as const },
+    { id: "demo-editor", name: "Thành viên Chỉnh sửa", phoneNumber: "+84900000002", role: "MEMBER" as const },
+    { id: "demo-sensitive", name: "Thành viên Riêng tư", phoneNumber: "+84900000003", role: "MEMBER" as const },
+    { id: "demo-both", name: "Thành viên Đầy đủ", phoneNumber: "+84900000004", role: "MEMBER" as const },
+    { id: "demo-reader", name: "Thành viên Chỉ đọc", phoneNumber: "+84900000005", role: "MEMBER" as const },
+    { id: "demo-locked", name: "Tài khoản Đã khóa", phoneNumber: "+84900000006", role: "MEMBER" as const },
   ];
   for (const person of people) {
-    await db.user.upsert({ where: { id: person.id }, update: {}, create: { ...person, mustChangePassword: false, status: person.id === "demo-locked" ? "LOCKED" : "ACTIVE", accounts: { create: { id: randomUUID(), accountId: person.id, providerId: "credential", password } } } });
+    await db.user.upsert({ where: { id: person.id }, update: {}, create: { ...person, email: internalAuthEmail(person.id), mustChangePassword: false, status: person.id === "demo-locked" ? "LOCKED" : "ACTIVE", accounts: { create: { id: randomUUID(), accountId: person.id, providerId: "credential", password } } } });
+    // Upgrade only the known local fixtures; never guess a phone for real users.
+    await db.$transaction(async tx => {
+      const updated = await tx.user.updateMany({ where: { id: person.id, phoneNumber: null }, data: { phoneNumber: person.phoneNumber, version: { increment: 1 } } });
+      if (updated.count) {
+        await tx.session.deleteMany({ where: { userId: person.id } });
+        await tx.auditLog.create({ data: { actorId: person.id, action: "PHONE_MIGRATION_SEED", entity: "User", entityId: person.id, diff: { demo: true, phoneNumber: { old: null, new: person.phoneNumber } } } });
+      }
+    });
   }
   const titles = ["Căn hộ vườn Ánh Dương · Dữ liệu mẫu", "Nhà phố Bình Yên · Dữ liệu mẫu", "Văn phòng Mây Xanh · Dữ liệu mẫu", "Mặt bằng Góc Phố · Dữ liệu mẫu", "Đất khu dân cư An Lành · Dữ liệu mẫu", "Phòng trọ Hoa Giấy · Dữ liệu mẫu", "Kho xưởng Phía Đông · Dữ liệu mẫu", "Căn hộ Ban Mai · Bản nháp mẫu"];
   const types: PropertyType[] = ["APARTMENT", "HOUSE", "OFFICE", "RETAIL", "LAND", "ROOM", "WAREHOUSE", "APARTMENT"];

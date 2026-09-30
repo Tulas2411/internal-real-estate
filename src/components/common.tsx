@@ -37,7 +37,7 @@ export function ErrorBox({ message, retry }: { message: string; retry?: () => vo
 export function Empty({ children = "Chưa có dữ liệu phù hợp." }: { children?: React.ReactNode }) { return <div className="empty"><Building2 size={36} /><h3>Chưa có dữ liệu</h3><p>{children}</p></div>; }
 export function Badge({ value }: { value: string }) { return <span className={`badge badge-${value.toLowerCase()}`}>{label(value)}</span>; }
 export function Title({ title, description, children }: { title: string; description?: string; children?: React.ReactNode }) { return <header className="page-title"><div><p className="eyebrow">KHÔNG GIAN LÀM VIỆC</p><h1>{title}</h1>{description && <p className="muted">{description}</p>}</div><div className="actions">{children}</div></header>; }
-export type Field = { name: string; label: string; type?: "text" | "number" | "textarea" | "date" | "password" | "email"; options?: { value: string; label: string }[]; required?: boolean; hint?: string; group?: string };
+export type Field = { name: string; label: string; type?: "text" | "number" | "textarea" | "date" | "password" | "email" | "tel"; options?: { value: string; label: string }[]; required?: boolean; hint?: string; group?: string };
 export const options = (values: readonly string[]) => values.map(value => ({ value, label: label(value) }));
 export function DataForm({ fields, initial = {}, submit, submitLabel = "Lưu thay đổi", schema, transform, onDone }: { fields: Field[]; initial?: Record<string, unknown>; submit: (data: Record<string, unknown>) => Promise<unknown>; submitLabel?: string; schema?: z.ZodType; transform?: (data: Record<string, string>) => Record<string, unknown>; onDone?: () => void }) {
   const defaults = Object.fromEntries(fields.map(f => [f.name, initial[f.name] == null ? (f.options?.[0]?.value ?? "") : String(initial[f.name]).slice(0, f.type === "date" ? 10 : undefined)]));
@@ -61,8 +61,8 @@ export function DataForm({ fields, initial = {}, submit, submitLabel = "Lưu tha
   })}>
     <div className="form-grid">{fields.map((field, index) => <div className={field.type === "textarea" ? "field full" : "field"} key={field.name}>
       {field.group && fields[index - 1]?.group !== field.group && <p className="field-group">{field.group}</p>}
-      <label htmlFor={field.name}>{field.label}{field.required && " *"}</label>
-      {field.options ? <select id={field.name} {...register(field.name)} required={field.required}>{field.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select> : field.type === "textarea" ? <textarea id={field.name} rows={3} {...register(field.name)} /> : <input id={field.name} type={field.type ?? "text"} step={field.type === "number" ? "any" : undefined} autoComplete={field.type === "password" ? "new-password" : undefined} {...register(field.name)} required={field.required} />}
+      <label htmlFor={field.name}>{field.label}{field.required && <span aria-hidden="true"> *</span>}</label>
+      {field.options ? <select id={field.name} {...register(field.name)} required={field.required}>{field.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select> : field.type === "textarea" ? <textarea id={field.name} rows={3} {...register(field.name)} /> : <input id={field.name} type={field.type ?? "text"} step={field.type === "number" ? "any" : undefined} autoComplete={field.type === "password" ? (field.name === "password" || field.name === "currentPassword" ? "current-password" : "new-password") : field.type === "tel" ? "tel" : undefined} {...register(field.name)} required={field.required} />}
       {field.hint && <small className="muted">{field.hint}</small>}
     </div>)}</div>
     {error && <ErrorBox message={error} />}{success && <p className="success" role="status">Đã lưu thành công.</p>}

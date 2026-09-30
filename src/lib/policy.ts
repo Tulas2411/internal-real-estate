@@ -2,11 +2,11 @@ import type { Prisma, User, Visibility } from "@prisma/client";
 import { auth } from "./auth";
 import { db } from "./db";
 import { fail } from "./errors";
-export type Actor = Pick<User, "id" | "name" | "email" | "role" | "status" | "mustChangePassword" | "version">;
+export type Actor = Pick<User, "id" | "name" | "phoneNumber" | "role" | "status" | "mustChangePassword" | "version">;
 export async function requireUser(headers: Headers, allowPasswordChange = false): Promise<Actor> {
   const session = await auth.api.getSession({ headers });
   if (!session) fail(401, "UNAUTHENTICATED", "Vui lòng đăng nhập.");
-  const user = await db.user.findUnique({ where: { id: session.user.id }, select: { id: true, name: true, email: true, role: true, status: true, mustChangePassword: true, version: true } });
+  const user = await db.user.findUnique({ where: { id: session.user.id }, select: { id: true, name: true, phoneNumber: true, role: true, status: true, mustChangePassword: true, version: true } });
   if (!user || user.status !== "ACTIVE") fail(401, "UNAUTHENTICATED", "Phiên đăng nhập đã hết hiệu lực.");
   if (user.mustChangePassword && !allowPasswordChange) fail(403, "PASSWORD_CHANGE_REQUIRED", "Bạn cần đổi mật khẩu tạm trước khi tiếp tục.");
   return user;

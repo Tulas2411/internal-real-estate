@@ -16,7 +16,7 @@ Một Node server Next.js phía sau Nginx/Caddy HTTPS; PostgreSQL và S3 private
 
 ## Rate limit và proxy
 
-Rate limit login theo email đã hash (8/phút) và cơ chế Better Auth (5/phút), mutations theo user (60/phút), password 5/phút, tạo/reset tài khoản 10/phút. Counters nằm trong PostgreSQL nên dùng chung giữa process. Tại reverse proxy thêm rate limit IP và giới hạn kết nối/body; chỉ trust forwarding headers do proxy ghi đè, không tin X-Forwarded-For từ Internet. Không bật cookieCache. Backend đọc user/permission hiện tại mỗi request; nội dung tải về trước khi bị thu hồi không thể bị xóa khỏi thiết bị người dùng.
+Rate limit login theo số điện thoại đã chuẩn hóa và hash (8/phút) và cơ chế Better Auth (5/phút), mutations theo user (60/phút), password 5/phút, tạo/reset tài khoản 10/phút. Counters nằm trong PostgreSQL nên dùng chung giữa process. Tại reverse proxy thêm rate limit IP và giới hạn kết nối/body; chỉ trust forwarding headers do proxy ghi đè, không tin X-Forwarded-For từ Internet. Không bật cookieCache. Backend đọc user/permission hiện tại mỗi request; nội dung tải về trước khi bị thu hồi không thể bị xóa khỏi thiết bị người dùng.
 
 ## Worker dọn storage
 

@@ -47,7 +47,7 @@ export async function getProperty(actor: Actor, id: string) {
       responsibleUser: { select: { id: true, name: true } }, images: { orderBy: { sortOrder: "asc" }, select: imageSelect },
       listings: { orderBy: [{ transactionType: "asc" }, { cycleNumber: "desc" }], select: { ...publicListingSelect, ...(access.sensitive ? { commissionType: true, expectedCommissionAmount: true, expectedCommissionRate: true, commissionNote: true } : {}), ...(access.history ? { history: { orderBy: { createdAt: "desc" }, include: { actor: { select: { name: true } } } } } : {}) } },
       ...(access.sensitive ? { owner: true, documents: { select: { id: true, originalName: true, documentType: true, bytes: true, createdAt: true } } } : {}),
-      ...(access.admin ? { permissions: { include: { user: { select: { id: true, name: true, email: true } } } } } : {}),
+      ...(access.admin ? { permissions: { include: { user: { select: { id: true, name: true, phoneNumber: true } } } } } : {}),
     } });
     const audits = access.history ? await tx.auditLog.findMany({ where: { propertyId: id, ...(access.sensitive ? {} : { sensitive: false }) }, orderBy: { createdAt: "desc" }, take: 100, include: { actor: { select: { name: true } } } }) : undefined;
     return { ...property, access, ...(audits ? { audits } : {}), listings: property.listings.map(l => ({ ...l, stale: isStale(l.status, l.lastConfirmedAt), pricePerSquareMeter: l.transactionType === "SALE" && l.amount && property[l.saleAreaBasis === "landArea" ? "landArea" : "usableArea"] ? l.amount.div(property[l.saleAreaBasis === "landArea" ? "landArea" : "usableArea"]!).toFixed(2) : null })) };
